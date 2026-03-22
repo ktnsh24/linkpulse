@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "linkpulse"
+version = "0.1.0"
+description = "URL Shortener with Click Analytics — event-driven microservice on Azure"
+authors = ["Ketan Sahu"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.34.0"}
+pydantic = "^2.10.0"
+pydantic-settings = "^2.7.0"
+azure-data-tables = "^12.5.0"
+azure-storage-queue = "^12.12.0"
+azure-storage-blob = "^12.24.0"
+azure-identity = "^1.19.0"
+opencensus-ext-azure = "^1.1.0"
+user-agents = "^2.2.0"
+loguru = "^0.7.0"
+httpx = "^0.28.0"
+aiohttp = "^3.11.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
+ruff = "^0.8.0"
+pre-commit = "^4.0.0"
+duckdb = "^1.1.0"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+

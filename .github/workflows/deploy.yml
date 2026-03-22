@@ -1,0 +1,84 @@
+# .github/workflows/deploy.yml
+# CI/CD for LinkPulse — lint, test, build, deploy to Azure Container Apps
+#
+# HOW IT WORKS:
+#   1. Trigger: manual (workflow_dispatch) — saves free GitHub Actions minutes
+#   2. Lint: runs ruff to check code style
+#   3. Test: runs pytest with in-memory fakes (no Azure needed)
+#   4. Build: builds Docker image and pushes to Azure Container Registry (ACR)
+#   5. Deploy: updates Azure Container App with the new image
+#
+# REQUIRED GITHUB SECRETS (set in repo Settings → Secrets):
+#   AZURE_CREDENTIALS    — JSON output from: az ad sp create-for-rbac --sdk-auth
+#   ACR_LOGIN_SERVER     — e.g. linkpulseacrmain.azurecr.io
+#   ACR_USERNAME         — ACR admin username
+#   ACR_PASSWORD         — ACR admin password
+#   AZURE_STORAGE_CONNECTION_STRING — from Azure Portal → Storage Account → Access keys
+
+name: Deploy LinkPulse
+
+on:
+  workflow_dispatch:  # Manual trigger only — saves free GitHub Actions minutes
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "main"
+        type: choice
+        options:
+          - main
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Lint with ruff
+        run: poetry run ruff check app/ tests/
+
+      - name: Run tests
+        run: poetry run pytest tests/ -v --tb=short
+
+  build-and-deploy:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/linkpulse:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          containerAppName: linkpulse-api-main
+          resourceGroup: linkpulse-rg-main
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/linkpulse:${{ github.sha }}
+

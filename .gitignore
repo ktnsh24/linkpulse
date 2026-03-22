@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.eggs/
+*.egg
+.venv/
+.env
+.idea/
+.vscode/
+*.tfstate
+*.tfstate.*
+**/.terraform/
+*.tfvars
+crash.log
+docs/
+
